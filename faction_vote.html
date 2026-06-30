@@ -550,7 +550,7 @@
     showToast('Saving roster...');
     try {
       // delete every existing row first (id is always >= 1, so this clears the table)
-      const delRes = await fetch(SUPABASE_URL + '/rest/v1/members?id=gte.0', {
+      const delRes = await fetch(SUPABASE_URL + '/rest/v1/members?id=gt.-1', {
         method: 'DELETE',
         headers: {
           'apikey': SUPABASE_KEY,
@@ -618,7 +618,7 @@
   async function confirmReset() {
     if (!confirm('Reset ALL votes to zero? This cannot be undone.')) return;
     try {
-      await fetch(SUPABASE_URL + '/rest/v1/votes?id=gte.0', {
+      await fetch(SUPABASE_URL + '/rest/v1/votes?id=gt.-1', {
         method: 'DELETE',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
