@@ -281,7 +281,7 @@
       <div class="admin-panel hidden" id="admin-panel">
         <div class="admin-panel-header">
           <span class="admin-panel-title">⬡ Admin controls</span>
-          <button class="admin-reset-btn" onclick="confirmReset()">Reset all votes</button>
+          <button class="admin-reset-btn" onclick="confirmReset()">Reset votes &amp; comments</button>
         </div>
         <div class="admin-hint">Use <strong style="color:#4a5270">Edit</strong> and <strong style="color:#4a5270">Remove</strong> buttons on each row. Hit <strong style="color:#27ae60">Save roster</strong> to make changes permanent.</div>
         <div class="admin-bottom-btns">
@@ -665,18 +665,24 @@
 
   // --- ADMIN: RESET ---
   async function confirmReset() {
-    if (!confirm('Reset ALL votes to zero? This cannot be undone.')) return;
+    if (!confirm('Reset ALL votes and comments? This wipes the voter count and every comment too. This cannot be undone.')) return;
     try {
       await fetch(SUPABASE_URL + '/rest/v1/votes?id=gt.-1', {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
+      await fetch(SUPABASE_URL + '/rest/v1/comments?id=gt.-1', {
         method: 'DELETE',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
       members.forEach(m => { tallies[m] = { stay: 0, kick: 0 }; });
       myVotes = {};
       uniqueVoterCount = 0;
+      comments = [];
       renderRoster();
+      renderComments();
       updateSummary();
-      showToast('All votes reset.');
+      showToast('All votes and comments reset.');
     } catch(e) { showToast('Reset failed — check connection.'); }
   }
 
