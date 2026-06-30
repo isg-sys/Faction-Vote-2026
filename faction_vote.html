@@ -549,18 +549,40 @@
   async function saveRoster() {
     showToast('Saving roster...');
     try {
-      await api('members', 'DELETE', null);
-      // delete all then re-insert
-      await fetch(SUPABASE_URL + '/rest/v1/members?position=gte.0', {
+      // delete every existing row first (id is always >= 1, so this clears the table)
+      const delRes = await fetch(SUPABASE_URL + '/rest/v1/members?id=gte.0', {
         method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Prefer': 'return=minimal'
+        }
       });
-      for (let i = 0; i < members.length; i++) {
-        await api('members', 'POST', { name: members[i], position: i + 1 });
+      if (!delRes.ok) {
+        const errText = await delRes.text();
+        throw new Error('Delete failed: ' + errText);
       }
+
+      // re-insert current roster in one batch call
+      const insertRes = await fetch(SUPABASE_URL + '/rest/v1/members', {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(members.map((name, i) => ({ name, position: i + 1 })))
+      });
+      if (!insertRes.ok) {
+        const errText = await insertRes.text();
+        throw new Error('Insert failed: ' + errText);
+      }
+
       showToast('Roster saved.');
     } catch(e) {
-      showToast('Save failed — check connection.');
+      console.error('Save roster error:', e);
+      showToast('Save failed — see console for details.');
     }
   }
 
