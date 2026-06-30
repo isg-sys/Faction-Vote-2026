@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faction Member Review</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0b0d14;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    color: #c8ccd8;
+    min-height: 100vh;
+  }
+
+  .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+  /* HEADER */
+  .header { text-align: center; margin-bottom: 2.5rem; padding-bottom: 1.75rem; border-bottom: 1px solid #1a1d2a; }
+  .header-eyebrow { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #3a4060; margin-bottom: 0.6rem; }
+  .header-title { font-size: 28px; font-weight: 700; color: #e8eaf0; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #3a4060; margin-top: 0.4rem; }
+
+  /* GATE */
+  .gate {
+    background: #11131e;
+    border: 1px solid #1a1d2a;
+    border-radius: 14px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+  .gate h2 { color: #e8eaf0; font-size: 17px; font-weight: 600; margin-bottom: 0.5rem; }
+  .gate p { color: #3a4060; font-size: 13px; margin-bottom: 1.5rem; }
+  .gate input[type="password"] {
+    display: block;
+    width: 100%;
+    background: #0b0d14;
+    border: 1px solid #1a1d2a;
+    border-radius: 8px;
+    color: #e8eaf0;
+    font-size: 15px;
+    padding: 0.65rem 1rem;
+    outline: none;
+    text-align: center;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.85rem;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .gate input[type="password"]:focus { border-color: #3d4a7a; }
+  .gate-btn {
+    background: #1e2540;
+    border: none;
+    border-radius: 8px;
+    color: #a0aacc;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 0.6rem 2rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+  }
+  .gate-btn:hover { background: #2e3a60; color: #e8eaf0; }
+  .gate-error { color: #c0392b; font-size: 12px; margin-top: 0.6rem; min-height: 18px; }
+  .gate-admin-link { margin-top: 1.5rem; font-size: 12px; color: #2a3050; cursor: pointer; text-decoration: underline; }
+  .gate-admin-link:hover { color: #4a5270; }
+
+  /* ROSTER */
+  .roster { display: flex; flex-direction: column; gap: 8px; }
+
+  .member-row {
+    background: #11131e;
+    border: 1px solid #1a1d2a;
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .member-row:hover { border-color: #252840; }
+  .member-row.voted-stay { border-color: #1a3a2a; background: #0e1812; }
+  .member-row.voted-kick { border-color: #3a1a1a; background: #160e0e; }
+
+  .member-num { font-size: 11px; color: #252840; font-weight: 700; min-width: 22px; font-variant-numeric: tabular-nums; }
+  .member-name { font-size: 14px; color: #c8ccd8; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .tally { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .tally-count { font-size: 13px; font-variant-numeric: tabular-nums; min-width: 20px; text-align: right; font-weight: 700; }
+  .tally-count.stay { color: #27ae60; }
+  .tally-count.kick { color: #c0392b; }
+  .tally-label { font-size: 10px; color: #2a3050; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .vote-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .vote-btn {
+    border-radius: 7px;
+    border: 1px solid;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0.32rem 0.7rem;
+    cursor: pointer;
+    transition: all 0.12s;
+    letter-spacing: 0.04em;
+    background: transparent;
+    font-family: inherit;
+  }
+  .stay-btn { border-color: #1a3a2a; color: #27ae60; }
+  .stay-btn:hover, .stay-btn.active { background: #1a3a2a; color: #2ecc71; border-color: #27ae60; }
+  .kick-btn { border-color: #3a1a1a; color: #c0392b; }
+  .kick-btn:hover, .kick-btn.active { background: #3a1a1a; color: #e74c3c; border-color: #c0392b; }
+
+  /* ADMIN controls on each row */
+  .admin-row-controls { display: flex; gap: 6px; flex-shrink: 0; }
+  .admin-del-btn {
+    background: transparent;
+    border: 1px solid #3a1a1a;
+    border-radius: 6px;
+    color: #7a3030;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0.28rem 0.55rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.12s;
+  }
+  .admin-del-btn:hover { background: #3a1a1a; color: #e74c3c; }
+  .admin-edit-btn {
+    background: transparent;
+    border: 1px solid #1a2a4a;
+    border-radius: 6px;
+    color: #3a5090;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0.28rem 0.55rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.12s;
+  }
+  .admin-edit-btn:hover { background: #1a2a4a; color: #7090e0; }
+
+  /* ADD MEMBER */
+  .add-section {
+    margin-top: 10px;
+    background: #11131e;
+    border: 1px dashed #252840;
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .add-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #c8ccd8;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .add-input::placeholder { color: #252840; }
+  .add-btn {
+    background: #1e2540;
+    border: none;
+    border-radius: 7px;
+    color: #6070a0;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0.32rem 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .add-btn:hover { background: #2e3a60; color: #a0b0e0; }
+
+  /* SUMMARY */
+  .summary-bar {
+    margin-top: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: #11131e;
+    border: 1px solid #1a1d2a;
+    border-radius: 10px;
+    display: flex;
+    gap: 1rem;
+  }
+  .summary-stat { text-align: center; flex: 1; }
+  .summary-num { font-size: 24px; font-weight: 700; }
+  .summary-num.stay { color: #27ae60; }
+  .summary-num.kick { color: #c0392b; }
+  .summary-num.neutral { color: #3a4060; }
+  .summary-lbl { font-size: 10px; color: #3a4060; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+
+  /* ADMIN PANEL */
+  .admin-panel {
+    margin-top: 2rem;
+    padding: 1.25rem;
+    background: #11131e;
+    border: 1px solid #2a1a3a;
+    border-radius: 12px;
+  }
+  .admin-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #1a1d2a;
+  }
+  .admin-panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #6040a0; font-weight: 700; }
+  .admin-reset-btn {
+    background: #3a1a1a;
+    border: none;
+    border-radius: 7px;
+    color: #c0392b;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0.35rem 0.9rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .admin-reset-btn:hover { background: #5a2a2a; color: #e74c3c; }
+  .admin-logout-btn {
+    background: transparent;
+    border: 1px solid #2a1d3a;
+    border-radius: 7px;
+    color: #4a3060;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0.35rem 0.9rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .admin-logout-btn:hover { background: #2a1d3a; color: #8060c0; }
+  .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* COMMENTS */
+  .comment-area {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #1a1d2a;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #3a4060;
+    margin-bottom: 0.9rem;
+  }
+  .comment-input {
+    width: 100%;
+    background: #11131e;
+    border: 1px solid #1a1d2a;
+    border-radius: 8px;
+    color: #c8ccd8;
+    font-size: 13px;
+    padding: 0.75rem 1rem;
+    resize: vertical;
+    min-height: 76px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .comment-input:focus { border-color: #3d4a7a; }
+  .comment-submit {
+    margin-top: 0.6rem;
+    background: #1e2540;
+    border: none;
+    border-radius: 8px;
+    color: #6070a0;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    cursor: pointer;
+    float: right;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .comment-submit:hover { background: #2e3a60; color: #a0b0e0; }
+  .comments-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 8px; clear: both; }
+  .comment-item {
+    background: #11131e;
+    border: 1px solid #1a1d2a;
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-size: 13px;
+    color: #7080a0;
+    line-height: 1.5;
+  }
+  .comment-meta { font-size: 10px; color: #252840; margin-top: 4px; }
+
+  /* EDIT MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal {
+    background: #11131e;
+    border: 1px solid #2a3060;
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 320px;
+  }
+  .modal h3 { color: #e8eaf0; font-size: 15px; margin-bottom: 1rem; }
+  .modal input {
+    width: 100%;
+    background: #0b0d14;
+    border: 1px solid #1a1d2a;
+    border-radius: 8px;
+    color: #e8eaf0;
+    font-size: 14px;
+    padding: 0.6rem 1rem;
+    outline: none;
+    font-family: inherit;
+    margin-bottom: 1rem;
+    transition: border-color 0.15s;
+  }
+  .modal input:focus { border-color: #3d4a7a; }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .modal-cancel {
+    background: transparent;
+    border: 1px solid #1a1d2a;
+    border-radius: 7px;
+    color: #4a5270;
+    font-size: 13px;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .modal-save {
+    background: #1e2540;
+    border: none;
+    border-radius: 7px;
+    color: #a0b0e0;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .modal-save:hover { background: #2e3a60; }
+
+  .hidden { display: none !important; }
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e2540;
+    color: #a0b0e0;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #2e3a60;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <div class="header-eyebrow">Faction review</div>
+    <div class="header-title">Faction Member Review</div>
+    <div class="header-sub">Vote stay or kick on each member</div>
+  </div>
+
+  <!-- VOTER GATE -->
+  <div id="voter-gate" class="gate">
+    <h2>Enter access code</h2>
+    <p>Restricted to faction members.</p>
+    <input type="password" id="voter-pw" placeholder="Password" autocomplete="current-password" />
+    <button class="gate-btn" onclick="checkVoterPw()">Enter</button>
+    <div class="gate-error" id="voter-err"></div>
+    <div class="gate-admin-link" onclick="showAdminGate()">Admin access</div>
+  </div>
+
+  <!-- ADMIN GATE -->
+  <div id="admin-gate" class="gate hidden">
+    <h2>Admin access</h2>
+    <p>Enter admin password.</p>
+    <input type="password" id="admin-pw" placeholder="Admin password" autocomplete="off" />
+    <button class="gate-btn" onclick="checkAdminPw()">Enter</button>
+    <div class="gate-error" id="admin-err"></div>
+    <div class="gate-admin-link" onclick="showVoterGate()">← Back to voter login</div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main" class="hidden">
+
+    <div class="roster" id="roster"></div>
+
+    <div class="add-section">
+      <input class="add-input" type="text" id="new-name" placeholder="Suggest a name to add..." maxlength="40" />
+      <button class="add-btn" onclick="addMember()">+ Add</button>
+    </div>
+
+    <div class="summary-bar hidden" id="summary-bar"></div>
+
+    <!-- ADMIN PANEL (only visible when admin logged in) -->
+    <div class="admin-panel hidden" id="admin-panel">
+      <div class="admin-panel-header">
+        <span class="admin-panel-title">⬡ Admin controls</span>
+        <div class="admin-actions">
+          <button class="admin-reset-btn" onclick="confirmReset()">Reset all votes</button>
+          <button class="admin-logout-btn" onclick="adminLogout()">Log out</button>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#3a4060; line-height:1.6;">
+        Use the <strong style="color:#4a5270">Edit</strong> and <strong style="color:#4a5270">Remove</strong> buttons on each row to manage members.<br>
+        To set a fresh roster, paste your new list into Claude and it will generate a new file.
+      </div>
+    </div>
+
+    <div class="comment-area">
+      <div class="section-label">General comments</div>
+      <textarea class="comment-input" id="comment-box" placeholder="Leave a comment about this vote..."></textarea>
+      <button class="comment-submit" onclick="submitComment()">Post comment</button>
+      <div class="comments-list" id="comments-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay hidden" id="edit-modal">
+  <div class="modal">
+    <h3>Edit name</h3>
+    <input type="text" id="edit-input" maxlength="40" />
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-save" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const VOTER_PW = '#chEEsE/4';
+  const ADMIN_PW = '#chEEsE/468';
+  const STORE_KEY = 'faction_voter_auth';
+
+  let members = [
+    "Mrhotchocolate","Weazy","K1RRA","Smitty1212","BunnyBoom",
+    "SWEETxnax","Randomonix","i_m_rishabh","Raspire","Moeilijk",
+    "frostyjs","-ROZIC-","Bona_1","Fallon9999","its0nlyalan",
+    "Lilpac","Naples_72","R-Byte","Rivaldi97","Shaylamander",
+    "x2amtoke","Hart13ss","BzzBzz","Alrxv"
+  ];
+
+  const tallies = {};
+  const comments = [];
+  let isAdmin = false;
+  let editingIndex = null;
+
+  function initTallies() {
+    members.forEach(m => { if (!tallies[m]) tallies[m] = { stay: 0, kick: 0 }; });
+  }
+
+  // --- AUTH ---
+  function checkVoterPw() {
+    const val = document.getElementById('voter-pw').value;
+    if (val === VOTER_PW) {
+      localStorage.setItem(STORE_KEY, '1');
+      enterMainView(false);
+    } else {
+      document.getElementById('voter-err').textContent = 'Incorrect password. Try again.';
+    }
+  }
+
+  function checkAdminPw() {
+    const val = document.getElementById('admin-pw').value;
+    if (val === ADMIN_PW) {
+      isAdmin = true;
+      enterMainView(true);
+    } else {
+      document.getElementById('admin-err').textContent = 'Incorrect password. Try again.';
+    }
+  }
+
+  function enterMainView(admin) {
+    document.getElementById('voter-gate').classList.add('hidden');
+    document.getElementById('admin-gate').classList.add('hidden');
+    document.getElementById('main').classList.remove('hidden');
+    if (admin) document.getElementById('admin-panel').classList.remove('hidden');
+    initTallies();
+    renderRoster();
+  }
+
+  function showAdminGate() {
+    document.getElementById('voter-gate').classList.add('hidden');
+    document.getElementById('admin-gate').classList.remove('hidden');
+    document.getElementById('admin-pw').focus();
+  }
+
+  function showVoterGate() {
+    document.getElementById('admin-gate').classList.add('hidden');
+    document.getElementById('voter-gate').classList.remove('hidden');
+  }
+
+  function adminLogout() {
+    isAdmin = false;
+    document.getElementById('admin-panel').classList.add('hidden');
+    renderRoster();
+  }
+
+  // Auto-login if password was saved
+  window.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem(STORE_KEY) === '1') {
+      enterMainView(false);
+    }
+    document.getElementById('voter-pw').addEventListener('keydown', e => { if (e.key==='Enter') checkVoterPw(); });
+    document.getElementById('admin-pw').addEventListener('keydown', e => { if (e.key==='Enter') checkAdminPw(); });
+    document.getElementById('new-name').addEventListener('keydown', e => { if (e.key==='Enter') addMember(); });
+    document.getElementById('edit-input').addEventListener('keydown', e => { if (e.key==='Enter') saveEdit(); if (e.key==='Escape') closeModal(); });
+  });
+
+  // --- ROSTER ---
+  function renderRoster() {
+    const roster = document.getElementById('roster');
+    roster.innerHTML = '';
+    members.forEach((name, i) => {
+      const t = tallies[name] || { stay: 0, kick: 0 };
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      row.id = `row-${i}`;
+
+      const adminControls = isAdmin ? `
+        <div class="admin-row-controls">
+          <button class="admin-edit-btn" onclick="openEdit(${i})">Edit</button>
+          <button class="admin-del-btn" onclick="deleteMember(${i})">Remove</button>
+        </div>` : '';
+
+      row.innerHTML = `
+        <span class="member-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="member-name" title="${name}">${name}</span>
+        <div class="tally">
+          <span class="tally-count stay" id="stay-${i}">${t.stay}</span>
+          <span class="tally-label">stay</span>
+        </div>
+        <div class="tally">
+          <span class="tally-count kick" id="kick-${i}">${t.kick}</span>
+          <span class="tally-label">kick</span>
+        </div>
+        <div class="vote-btns">
+          <button class="vote-btn stay-btn" id="stay-btn-${i}" onclick="vote('${name}',${i},'stay')">Stay</button>
+          <button class="vote-btn kick-btn" id="kick-btn-${i}" onclick="vote('${name}',${i},'kick')">Kick</button>
+        </div>
+        ${adminControls}
+      `;
+      roster.appendChild(row);
+    });
+    updateSummary();
+  }
+
+  // --- VOTING ---
+  function vote(name, idx, choice) {
+    if (!tallies[name]) tallies[name] = { stay: 0, kick: 0 };
+    const t = tallies[name];
+    const stayEl = document.getElementById(`stay-${idx}`);
+    const kickEl = document.getElementById(`kick-${idx}`);
+    const stayBtn = document.getElementById(`stay-btn-${idx}`);
+    const kickBtn = document.getElementById(`kick-btn-${idx}`);
+    const row = document.getElementById(`row-${idx}`);
+
+    const wasActive = stayBtn.classList.contains('active') && choice==='stay'
+                   || kickBtn.classList.contains('active') && choice==='kick';
+
+    // deactivate both first
+    if (stayBtn.classList.contains('active')) { t.stay--; stayBtn.classList.remove('active'); row.classList.remove('voted-stay'); }
+    if (kickBtn.classList.contains('active')) { t.kick--; kickBtn.classList.remove('active'); row.classList.remove('voted-kick'); }
+
+    if (!wasActive) {
+      t[choice]++;
+      if (choice==='stay') { stayBtn.classList.add('active'); row.classList.add('voted-stay'); }
+      else { kickBtn.classList.add('active'); row.classList.add('voted-kick'); }
+    }
+
+    stayEl.textContent = t.stay;
+    kickEl.textContent = t.kick;
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const totalStay = Object.values(tallies).reduce((a,t)=>a+t.stay,0);
+    const totalKick = Object.values(tallies).reduce((a,t)=>a+t.kick,0);
+    const total = totalStay + totalKick;
+    const bar = document.getElementById('summary-bar');
+    if (total === 0) { bar.classList.add('hidden'); return; }
+    bar.classList.remove('hidden');
+    bar.innerHTML = `
+      <div class="summary-stat"><div class="summary-num stay">${totalStay}</div><div class="summary-lbl">Stay votes</div></div>
+      <div class="summary-stat"><div class="summary-num neutral">${total}</div><div class="summary-lbl">Total votes</div></div>
+      <div class="summary-stat"><div class="summary-num kick">${totalKick}</div><div class="summary-lbl">Kick votes</div></div>
+    `;
+  }
+
+  // --- ADD MEMBER ---
+  function addMember() {
+    const input = document.getElementById('new-name');
+    const name = input.value.trim();
+    if (!name) return;
+    if (members.includes(name)) { showToast('Name already on the list.'); input.value=''; return; }
+    members.push(name);
+    tallies[name] = { stay: 0, kick: 0 };
+    input.value = '';
+    renderRoster();
+    showToast(`${name} added.`);
+  }
+
+  // --- ADMIN: DELETE ---
+  function deleteMember(idx) {
+    const name = members[idx];
+    if (!confirm(`Remove "${name}" from the vote?`)) return;
+    delete tallies[name];
+    members.splice(idx, 1);
+    renderRoster();
+    showToast(`${name} removed.`);
+  }
+
+  // --- ADMIN: EDIT ---
+  function openEdit(idx) {
+    editingIndex = idx;
+    document.getElementById('edit-input').value = members[idx];
+    document.getElementById('edit-modal').classList.remove('hidden');
+    document.getElementById('edit-input').focus();
+    document.getElementById('edit-input').select();
+  }
+
+  function closeModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+    editingIndex = null;
+  }
+
+  function saveEdit() {
+    const newName = document.getElementById('edit-input').value.trim();
+    if (!newName || editingIndex === null) { closeModal(); return; }
+    const oldName = members[editingIndex];
+    if (newName === oldName) { closeModal(); return; }
+    if (members.includes(newName)) { showToast('That name is already on the list.'); return; }
+    tallies[newName] = tallies[oldName] || { stay: 0, kick: 0 };
+    delete tallies[oldName];
+    members[editingIndex] = newName;
+    closeModal();
+    renderRoster();
+    showToast(`Renamed to ${newName}.`);
+  }
+
+  // --- ADMIN: RESET VOTES ---
+  function confirmReset() {
+    if (!confirm('Reset ALL votes to zero? This cannot be undone.')) return;
+    members.forEach(m => { tallies[m] = { stay: 0, kick: 0 }; });
+    renderRoster();
+    showToast('All votes reset.');
+  }
+
+  // --- COMMENTS ---
+  function submitComment() {
+    const box = document.getElementById('comment-box');
+    const text = box.value.trim();
+    if (!text) return;
+    comments.push({ text, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
+    box.value = '';
+    renderComments();
+  }
+
+  function renderComments() {
+    document.getElementById('comments-list').innerHTML = comments.map(c =>
+      `<div class="comment-item">${c.text}<div class="comment-meta">${c.time}</div></div>`
+    ).join('');
+  }
+
+  document.getElementById('comment-box') && document.getElementById('comment-box').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) submitComment();
+  });
+
+  // --- TOAST ---
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    setTimeout(() => { t.style.opacity = '0'; }, 2200);
+  }
+</script>
+</body>
+</html>
