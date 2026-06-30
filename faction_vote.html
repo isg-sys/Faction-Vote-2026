@@ -511,7 +511,7 @@
       if (choice==='stay') { stayBtn.classList.add('active'); row.classList.add('voted-stay'); }
       else { kickBtn.classList.add('active'); row.classList.add('voted-kick'); }
       try {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/votes', {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/votes?on_conflict=voter_id,member_name', {
           method: 'POST',
           headers: {
             'apikey': SUPABASE_KEY,
