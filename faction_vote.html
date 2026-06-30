@@ -324,6 +324,17 @@
   const VOTER_PW = '#chEEsE/4';
   const ADMIN_PW = '#chEEsE/468';
   const STORE_KEY = 'faction_voter_auth';
+  const VOTER_ID_KEY = 'faction_voter_id';
+
+  function getVoterId() {
+    let id = localStorage.getItem(VOTER_ID_KEY);
+    if (!id) {
+      id = 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem(VOTER_ID_KEY, id);
+    }
+    return id;
+  }
+  const VOTER_ID = getVoterId();
 
   let members = [];
   let tallies = {};
@@ -352,10 +363,11 @@
 
   // --- LOAD DATA ---
   async function loadData() {
-    const [memberRows, voteRows, commentRows] = await Promise.all([
+    const [memberRows, voteRows, commentRows, myVoteRows] = await Promise.all([
       api('members?select=name,position&order=position.asc'),
       api('votes?select=member_name,choice'),
-      api('comments?select=content,created_at&order=created_at.asc')
+      api('comments?select=content,created_at&order=created_at.asc'),
+      api('votes?select=member_name,choice&voter_id=eq.' + encodeURIComponent(VOTER_ID))
     ]);
 
     members = memberRows.map(r => r.name);
@@ -364,6 +376,8 @@
     voteRows.forEach(v => {
       if (tallies[v.member_name]) tallies[v.member_name][v.choice]++;
     });
+    myVotes = {};
+    myVoteRows.forEach(v => { myVotes[v.member_name] = v.choice; });
     comments = commentRows.map(r => ({
       text: r.content,
       time: new Date(r.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
@@ -496,8 +510,37 @@
       myVotes[name] = choice;
       if (choice==='stay') { stayBtn.classList.add('active'); row.classList.add('voted-stay'); }
       else { kickBtn.classList.add('active'); row.classList.add('voted-kick'); }
-      try { await api('votes', 'POST', { member_name: name, choice }); }
-      catch(e) { showToast('Could not save vote — check connection.'); }
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/votes', {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_KEY,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
+          },
+          body: JSON.stringify({ member_name: name, choice, voter_id: VOTER_ID })
+        });
+        if (!res.ok) throw new Error(await res.text());
+      } catch(e) {
+        console.error('Vote save error:', e);
+        showToast('Could not save vote — check connection.');
+      }
+    } else {
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/votes?member_name=eq.' + encodeURIComponent(name) + '&voter_id=eq.' + encodeURIComponent(VOTER_ID), {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_KEY,
+            'Prefer': 'return=minimal'
+          }
+        });
+        if (!res.ok) throw new Error(await res.text());
+      } catch(e) {
+        console.error('Vote remove error:', e);
+        showToast('Could not remove vote — check connection.');
+      }
     }
 
     document.getElementById(`stay-${idx}`).textContent = t.stay;
