@@ -362,10 +362,12 @@
   }
 
   // --- LOAD DATA ---
+  let uniqueVoterCount = 0;
+
   async function loadData() {
     const [memberRows, voteRows, commentRows, myVoteRows] = await Promise.all([
       api('members?select=name,position&order=position.asc'),
-      api('votes?select=member_name,choice'),
+      api('votes?select=member_name,choice,voter_id'),
       api('comments?select=content,created_at&order=created_at.asc'),
       api('votes?select=member_name,choice&voter_id=eq.' + encodeURIComponent(VOTER_ID))
     ]);
@@ -373,9 +375,12 @@
     members = memberRows.map(r => r.name);
     tallies = {};
     members.forEach(m => { tallies[m] = { stay: 0, kick: 0 }; });
+    const voterIdSet = new Set();
     voteRows.forEach(v => {
       if (tallies[v.member_name]) tallies[v.member_name][v.choice]++;
+      if (v.voter_id) voterIdSet.add(v.voter_id);
     });
+    uniqueVoterCount = voterIdSet.size;
     myVotes = {};
     myVoteRows.forEach(v => { myVotes[v.member_name] = v.choice; });
     comments = commentRows.map(r => ({
@@ -496,6 +501,7 @@
     const kickBtn = document.getElementById(`kick-btn-${idx}`);
     const row = document.getElementById(`row-${idx}`);
 
+    const hadAnyVotesBefore = Object.keys(myVotes).length > 0;
     const deselecting = prev === choice;
 
     if (prev) {
@@ -545,20 +551,20 @@
 
     document.getElementById(`stay-${idx}`).textContent = t.stay;
     document.getElementById(`kick-${idx}`).textContent = t.kick;
+
+    const hasAnyVotesNow = Object.keys(myVotes).length > 0;
+    if (!hadAnyVotesBefore && hasAnyVotesNow) uniqueVoterCount++;
+    if (hadAnyVotesBefore && !hasAnyVotesNow) uniqueVoterCount = Math.max(0, uniqueVoterCount - 1);
+
     updateSummary();
   }
 
   function updateSummary() {
-    const totalStay = Object.values(tallies).reduce((a,t)=>a+t.stay,0);
-    const totalKick = Object.values(tallies).reduce((a,t)=>a+t.kick,0);
-    const total = totalStay + totalKick;
     const bar = document.getElementById('summary-bar');
-    if (total === 0) { bar.classList.add('hidden'); return; }
+    if (uniqueVoterCount === 0) { bar.classList.add('hidden'); return; }
     bar.classList.remove('hidden');
     bar.innerHTML = `
-      <div class="summary-stat"><div class="summary-num stay">${totalStay}</div><div class="summary-lbl">Stay</div></div>
-      <div class="summary-stat"><div class="summary-num neutral">${total}</div><div class="summary-lbl">Total</div></div>
-      <div class="summary-stat"><div class="summary-num kick">${totalKick}</div><div class="summary-lbl">Kick</div></div>`;
+      <div class="summary-stat"><div class="summary-num neutral" style="font-size:28px">${uniqueVoterCount}</div><div class="summary-lbl">${uniqueVoterCount === 1 ? 'Person has voted' : 'People have voted'}</div></div>`;
   }
 
   // --- ADD MEMBER ---
@@ -667,6 +673,7 @@
       });
       members.forEach(m => { tallies[m] = { stay: 0, kick: 0 }; });
       myVotes = {};
+      uniqueVoterCount = 0;
       renderRoster();
       updateSummary();
       showToast('All votes reset.');
